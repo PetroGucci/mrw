@@ -11,7 +11,7 @@
 
   <div class="app-container">
     
-    <!-- Top Bar Navigation / Header -->
+    <!-- Header -->
     <header class="app-header">
       <div class="brand">
         <div class="brand-icon">📦</div>
@@ -37,9 +37,15 @@
       </button>
     </div>
 
-    <!-- Visor de Cámara y Estado -->
+    <!-- Visor de Cámara -->
     <div class="scanner-card">
-      <div id="reader"></div>
+      <div class="camera-wrapper">
+        <div id="reader"></div>
+        <div class="camera-overlay-controls">
+          <button type="button" class="btn-cam-mini" id="btnTorch" title="Encender Linterna">🔦</button>
+          <button type="button" class="btn-cam-mini" id="btnSwitchCam" title="Cambiar Cámara">🔄</button>
+        </div>
+      </div>
       <div class="status-badge" id="statusMsg">
         <span class="pulse-icon"></span> Cámara lista. Apunte al QR...
       </div>
@@ -127,6 +133,9 @@
       <div id="contenedorLista" class="modal-body"></div>
     </div>
   </div>
+
+  <!-- Contenedor Toast para Notificaciones Flotantes en UI -->
+  <div id="toastContainer" class="toast-container"></div>
 
   <script src="app.js"></script>
 </body>
