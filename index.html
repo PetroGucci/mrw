@@ -10,9 +10,9 @@
 <body>
 
   <div class="container">
-    <!-- Barra superior de sincronización y vista -->
+    <!-- Barra superior con contador y botones estilizados -->
     <div class="header-sync">
-      <div>
+      <div class="counter-group">
         <span class="counter-badge" id="lblPendientes">Pendientes: 0</span>
         <button type="button" class="btn-ver" id="btnVerPendientes">📋 Ver Lista</button>
       </div>
@@ -37,10 +37,11 @@
 
       <div class="grid">
         <div class="form-group">
-          <label for="tipoPaquete">Tipo (Sobre/Paquete)</label>
+          <label for="tipoPaquete">Tipo (Formato)</label>
           <select id="tipoPaquete">
-            <option value="PAQUETE">Paquete</option>
-            <option value="SOBRE">Sobre</option>
+            <option value="ESPECIAL">ESPECIAL</option>
+            <option value="SOBRE">SOBRE</option>
+            <option value="PAQUETE">PAQUETE</option>
           </select>
         </div>
         <div class="form-group">
@@ -48,6 +49,7 @@
           <select id="tipoEnvio">
             <option value="COD">COD</option>
             <option value="PAGO">PAGO</option>
+            <option value="PREADQUIRIDO">PREADQUIRIDO</option>
           </select>
         </div>
       </div>
@@ -90,9 +92,7 @@
         <h3>Paquetes Guardados Localmente</h3>
         <span class="close-modal" id="btnCloseModal">&times;</span>
       </div>
-      <div id="contenedorLista" class="modal-body">
-        <!-- Se rellena dinámicamente desde app.js -->
-      </div>
+      <div id="contenedorLista" class="modal-body"></div>
     </div>
   </div>
 

@@ -1,6 +1,6 @@
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzY5mSFuqqP99aYIx7FK4nF78R18eFrtffQdEBen2c4UM1wqW5jN1z-Z_PW2okITNGA/exec'; 
 let paquetePausado = false;
-let indiceEdicion = null; // Guarda el índice si estamos modificando un paquete
+let indiceEdicion = null;
 
 document.addEventListener("DOMContentLoaded", () => {
   actualizarContadorUI();
@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById('btnCancelarEdicion').addEventListener('click', cancelarEdicion);
 });
 
-// Parser de datos del código QR
+// Lógica de detección automática avanzada de QR
 function procesarTextoQR(decodedText) {
   if (paquetePausado) return;
 
@@ -24,8 +24,13 @@ function procesarTextoQR(decodedText) {
     document.getElementById('numeroEnvio').value = datos[0] || '';
     document.getElementById('emisor').value = (datos[3] || '').toUpperCase();
     document.getElementById('receptor').value = (datos[8] || '').toUpperCase();
-    document.getElementById('telefonoReceptor').value = datos[9] || '';
+    
+    // Limpieza de teléfono (conservar números)
+    let tlf = datos[9] || '';
+    if (tlf.startsWith('+58')) tlf = '0' + tlf.slice(3);
+    document.getElementById('telefonoReceptor').value = tlf;
 
+    // 1. Detección de Fecha de Emisión
     if (datos[2]) {
       const fechaHora = datos[2].split(' ')[0];
       const p = fechaHora.split('-');
@@ -34,6 +39,17 @@ function procesarTextoQR(decodedText) {
       }
     }
 
+    // 2. Detección de Peso y Asignación de Tipo (Formato)
+    const peso = parseFloat(datos[22]) || 0;
+    if (peso < 0.151) {
+      document.getElementById('tipoPaquete').value = 'ESPECIAL';
+    } else if (peso <= 0.500) {
+      document.getElementById('tipoPaquete').value = 'SOBRE';
+    } else {
+      document.getElementById('tipoPaquete').value = 'PAQUETE';
+    }
+
+    // 3. Extracción de Precio y Cupones
     let precioEncontrado = '';
     let cuponesEncontrados = '1';
 
@@ -48,7 +64,25 @@ function procesarTextoQR(decodedText) {
       }
     }
 
-    document.getElementById('precio').value = precioEncontrado;
+    // 4. Detección de Condición (COD / PAGO / PREADQUIRIDO)
+    // Preadquiridos: Tienen código especial en datos[1] (ej: CS-...) y monto en 0.00
+    const tieneCodigoEspecial = datos[1] && datos[1].trim().length > 3;
+    const esMontoCero = precioEncontrado === '' || parseFloat(precioEncontrado) === 0;
+
+    if (tieneCodigoEspecial || esMontoCero) {
+      document.getElementById('tipoEnvio').value = 'PREADQUIRIDO';
+      document.getElementById('precio').value = '0.00';
+      
+      // Intentar extraer cupones para Preadquiridos si no vino precio
+      if (datos[28] && !isNaN(parseInt(datos[28]))) {
+        cuponesEncontrados = datos[28];
+      }
+    } else {
+      const esCod = datos[19] === '1';
+      document.getElementById('tipoEnvio').value = esCod ? 'COD' : 'PAGO';
+      document.getElementById('precio').value = precioEncontrado;
+    }
+
     document.getElementById('cupones').value = cuponesEncontrados;
 
     const statusMsg = document.getElementById('statusMsg');
@@ -77,7 +111,6 @@ function iniciarCamara() {
   });
 }
 
-// Guardar o Actualizar Paquete en LocalStorage
 function guardarLocalmente(e) {
   e.preventDefault();
 
@@ -102,14 +135,12 @@ function guardarLocalmente(e) {
   const cola = JSON.parse(localStorage.getItem('mrw_cola_paquetes') || '[]');
 
   if (indiceEdicion !== null) {
-    // Modo Edición: Actualiza la posición existente
     cola[indiceEdicion] = paqueteData;
     indiceEdicion = null;
     document.getElementById('btnSubmitForm').innerText = '📥 Guardar Localmente';
     document.getElementById('btnSubmitForm').style.backgroundColor = 'var(--primary-red)';
     document.getElementById('btnCancelarEdicion').style.display = 'none';
   } else {
-    // Modo Nuevo: Agrega a la cola
     cola.push(paqueteData);
   }
 
@@ -128,7 +159,6 @@ function actualizarContadorUI() {
   document.getElementById('btnSincronizar').disabled = cola.length === 0;
 }
 
-// Modal y Gestión de Lista
 function abrirModalLista() {
   renderizarListaModal();
   document.getElementById('modalLista').style.display = 'flex';
@@ -195,7 +225,6 @@ function prepararEdicion(index) {
   document.getElementById('receptor').value = p.receptor;
   document.getElementById('fechaEmision').value = p.fechaEmision;
 
-  // Cambiar botones UI
   const btnSubmit = document.getElementById('btnSubmitForm');
   btnSubmit.innerText = '💾 Actualizar Cambios';
   btnSubmit.style.backgroundColor = 'var(--orange-edit)';
@@ -214,7 +243,6 @@ function cancelarEdicion() {
   document.getElementById('btnCancelarEdicion').style.display = 'none';
 }
 
-// Sincronización masiva con Google Sheets
 async function sincronizarConSheets() {
   const cola = JSON.parse(localStorage.getItem('mrw_cola_paquetes') || '[]');
   if (cola.length === 0) return;
