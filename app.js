@@ -179,90 +179,156 @@ function procesarTextoQR(decodedText) {
 
   const datos = decodedText.split(';');
   if (datos.length >= 25) {
-    const numeroEnvio = (datos[0] || '').trim();
+    // --- LÓGICA 2: Rellenar con '0' si el tracking tiene 14 dígitos ---
+    let numeroEnvio = (datos[0] || '').trim();
+    if (numeroEnvio.length === 14) {
+      numeroEnvio = '0' + numeroEnvio;
+    }
 
     if (esPaqueteDuplicado(numeroEnvio)) {
       paquetePausado = true;
       const statusMsg = document.getElementById('statusMsg');
       statusMsg.innerHTML = '⚠️ <strong>¡Atención!</strong> Paquete ' + numeroEnvio + ' ya escaneado.';
       statusMsg.style.color = "var(--warning)";
-
       showToast(`El paquete #${numeroEnvio} ya está en la lista`, "warning");
+      
+      // Vibración de error (dos toques rápidos)
+      if (navigator.vibrate) navigator.vibrate([100, 100, 100]);
 
       setTimeout(() => {
         paquetePausado = false;
         statusMsg.innerHTML = '<span class="status-dot"></span> Cámara lista. Apunte al QR...';
         statusMsg.style.color = "var(--success)";
-      }, 3000);
+      }, 2500);
       return;
     }
 
     paquetePausado = true;
 
-    // 1. Datos del Envío, Emisor y Receptor
+    // 1. Datos del Envío
     document.getElementById('numeroEnvio').value = numeroEnvio;
     document.getElementById('emisor').value = (datos[3] || '').toUpperCase().trim();
     document.getElementById('receptor').value = (datos[8] || '').toUpperCase().trim();
 
-    // 2. Teléfono Receptor
     let tlf = (datos[9] || '').trim();
     if (tlf.startsWith('+58')) tlf = '0' + tlf.slice(3);
     document.getElementById('telefonoReceptor').value = tlf;
 
-    // 3. Fecha de Emisión
     if (datos[2]) {
       const fechaHora = datos[2].split(' ')[0];
       const p = fechaHora.split('-');
-      if (p.length === 3) {
-        document.getElementById('fechaEmision').value = `${p[2]}/${p[1]}/${p[0].slice(-2)}`;
-      }
+      if (p.length === 3) document.getElementById('fechaEmision').value = `${p[2]}/${p[1]}/${p[0].slice(-2)}`;
     }
 
-    // 4. Peso y Formato (datos[22])
+    // 2. Extracción de Peso, Precio y Códigos
     const peso = parseFloat(datos[22]) || 0;
-    if (peso < 0.151) {
-      document.getElementById('tipoPaquete').value = 'ESPECIAL';
-    } else if (peso <= 0.500) {
-      document.getElementById('tipoPaquete').value = 'SOBRE';
-    } else {
-      document.getElementById('tipoPaquete').value = 'PAQUETE';
-    }
-
-    // 5. Cupones (datos[30] o por Tarifario)
     let cupones = parseInt(datos[30], 10);
-    if (isNaN(cupones) || cupones <= 0) {
-      cupones = calcularCuponesPorPeso(peso);
-    }
-    document.getElementById('cupones').value = cupones.toString();
-
-    // 6. Precio (datos[29])
+    if (isNaN(cupones) || cupones <= 0) cupones = calcularCuponesPorPeso(peso);
+    
     let precioRaw = parseFloat(datos[29]);
     let precioFormatted = !isNaN(precioRaw) ? precioRaw.toFixed(2) : "0.00";
 
-    // 7. Condición de Pago (datos[1] para Preadquirido, datos[20] para COD/PAGO)
     const codigoEspecial = (datos[1] || '').trim();
     const esPreadquirido = codigoEspecial.startsWith('CS-') || (codigoEspecial.length > 3 && precioRaw === 0);
 
+    // --- LÓGICA 1: Preadquirido siempre es PAQUETE ---
     if (esPreadquirido) {
       document.getElementById('tipoEnvio').value = 'PREADQUIRIDO';
       document.getElementById('precio').value = '0.00';
+      document.getElementById('tipoPaquete').value = 'PAQUETE'; // Fuerza el formato
     } else {
       const esCod = datos[20] === '1';
       document.getElementById('tipoEnvio').value = esCod ? 'COD' : 'PAGO';
       document.getElementById('precio').value = precioFormatted;
+      
+      // Si no es preadquirido, el formato depende del peso normal
+      if (peso < 0.151) {
+        document.getElementById('tipoPaquete').value = 'ESPECIAL';
+      } else if (peso <= 0.500) {
+        document.getElementById('tipoPaquete').value = 'SOBRE';
+      } else {
+        document.getElementById('tipoPaquete').value = 'PAQUETE';
+      }
     }
 
+    document.getElementById('cupones').value = cupones.toString();
+
+    // --- INTERFAZ 2: Feedback Físico (Vibración y Sonido) ---
+    feedbackExito();
+
+    // --- INTERFAZ 1: Auto-guardado Inmediato ---
+    guardarRegistroAutomáticamente();
+
     const statusMsg = document.getElementById('statusMsg');
-    statusMsg.innerHTML = '✨ ¡QR Escaneado con Éxito!';
+    statusMsg.innerHTML = '✨ ¡Guardado: ' + numeroEnvio + '!';
     statusMsg.style.color = "var(--accent-blue)";
+    
+    // Toast no bloqueante
+    showToast(`Guía #${numeroEnvio} guardada`, "success", "📦");
 
-    showToast(`Guía #${numeroEnvio} cargada al formulario`, "success", "📦");
-
+    // Pausa muy corta para permitir mover al siguiente paquete
     setTimeout(() => {
       paquetePausado = false;
       statusMsg.innerHTML = '<span class="status-dot"></span> Cámara lista. Apunte al QR...';
       statusMsg.style.color = "var(--success)";
-    }, 2500);
+      document.getElementById('registroForm').reset(); // Limpia el form para el siguiente
+    }, 1200);
+  }
+}
+
+// Nueva función de guardado sin necesidad del botón
+function guardarRegistroAutomáticamente() {
+  const hoy = new Date();
+  const dia = String(hoy.getDate()).padStart(2, '0');
+  const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+  const anio = hoy.getFullYear().toString().slice(-2);
+
+  const paqueteData = {
+    telefonoReceptor: document.getElementById('telefonoReceptor').value,
+    numeroEnvio: document.getElementById('numeroEnvio').value,
+    tipoPaquete: document.getElementById('tipoPaquete').value,
+    tipoEnvio: document.getElementById('tipoEnvio').value,
+    cupones: document.getElementById('cupones').value,
+    precio: document.getElementById('precio').value,
+    emisor: document.getElementById('emisor').value,
+    receptor: document.getElementById('receptor').value,
+    fechaEmision: document.getElementById('fechaEmision').value,
+    fechaRecepcion: `${dia}/${mes}/${anio}`
+  };
+
+  const cola = JSON.parse(localStorage.getItem('mrw_cola_paquetes') || '[]');
+  cola.push(paqueteData);
+  localStorage.setItem('mrw_cola_paquetes', JSON.stringify(cola));
+  actualizarContadorUI();
+}
+
+// Generador de sonido y vibración nativa
+function feedbackExito() {
+  // Vibración (Android)
+  if (navigator.vibrate) {
+    navigator.vibrate(200); // Vibra 200 milisegundos
+  }
+  
+  // Sonido tipo "Beep" de escáner usando el sintetizador web (sin descargar MP3)
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (AudioContext) {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      
+      osc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1200, ctx.currentTime); // Tono agudo
+      gainNode.gain.setValueAtTime(0.1, ctx.currentTime);  // Volumen bajo
+      
+      osc.start();
+      osc.stop(ctx.currentTime + 0.1); // Dura 0.1 segundos
+    }
+  } catch (e) {
+    console.log("Audio API no soportada en este navegador");
   }
 }
 
