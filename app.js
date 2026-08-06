@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ==========================================================================
-// SISTEMA DE NOTIFICACIONES TOAST (UI/UX PRO MAX)
+// NOTIFICACIONES TOAST FLOTANTES
 // ==========================================================================
 function showToast(message, type = 'success', icon = null) {
   const container = document.getElementById('toastContainer');
@@ -58,7 +58,7 @@ function showToast(message, type = 'success', icon = null) {
 }
 
 // ==========================================================================
-// LÓGICA DE TARIFARIO OFICIAL MRW (PESO -> CUPONES)
+// TARIFARIO OFICIAL MRW (PESO -> CUPONES)
 // ==========================================================================
 function calcularCuponesPorPeso(pesoKg) {
   if (pesoKg <= 1.0) return 1;
@@ -117,7 +117,7 @@ function updateThemeIcon(theme) {
 }
 
 // ==========================================================================
-// CONTROL DE CÁMARA & MINI-BOTONES
+// CÁMARA & MINI-BOTONES
 // ==========================================================================
 function iniciarCamara() {
   if (html5QrcodeScanner) {
@@ -167,7 +167,7 @@ function switchCamera() {
 }
 
 // ==========================================================================
-// VALIDACIÓN DE DUPLICADOS Y PARSER QR
+// PARSER INTELIGENTE DE CÓDIGO QR
 // ==========================================================================
 function esPaqueteDuplicado(numeroEnvio) {
   const cola = JSON.parse(localStorage.getItem('mrw_cola_paquetes') || '[]');
@@ -178,8 +178,8 @@ function procesarTextoQR(decodedText) {
   if (paquetePausado) return;
 
   const datos = decodedText.split(';');
-  if (datos.length >= 15) {
-    const numeroEnvio = datos[0] || '';
+  if (datos.length >= 25) {
+    const numeroEnvio = (datos[0] || '').trim();
 
     if (esPaqueteDuplicado(numeroEnvio)) {
       paquetePausado = true;
@@ -199,15 +199,17 @@ function procesarTextoQR(decodedText) {
 
     paquetePausado = true;
 
+    // 1. Datos del Envío, Emisor y Receptor
     document.getElementById('numeroEnvio').value = numeroEnvio;
-    document.getElementById('emisor').value = (datos[3] || '').toUpperCase();
-    document.getElementById('receptor').value = (datos[8] || '').toUpperCase();
+    document.getElementById('emisor').value = (datos[3] || '').toUpperCase().trim();
+    document.getElementById('receptor').value = (datos[8] || '').toUpperCase().trim();
 
-    let tlf = datos[9] || '';
+    // 2. Teléfono Receptor
+    let tlf = (datos[9] || '').trim();
     if (tlf.startsWith('+58')) tlf = '0' + tlf.slice(3);
     document.getElementById('telefonoReceptor').value = tlf;
 
-    // 1. Detección de Fecha
+    // 3. Fecha de Emisión
     if (datos[2]) {
       const fechaHora = datos[2].split(' ')[0];
       const p = fechaHora.split('-');
@@ -216,7 +218,7 @@ function procesarTextoQR(decodedText) {
       }
     }
 
-    // 2. Detección de Peso, Formato y Cupones según Tarifario Oficial
+    // 4. Peso y Formato (datos[22])
     const peso = parseFloat(datos[22]) || 0;
     if (peso < 0.151) {
       document.getElementById('tipoPaquete').value = 'ESPECIAL';
@@ -226,37 +228,29 @@ function procesarTextoQR(decodedText) {
       document.getElementById('tipoPaquete').value = 'PAQUETE';
     }
 
-    let cuponesCalculados = calcularCuponesPorPeso(peso);
-
-    // 3. Extracción de Precio Total y verificación de Cupones del QR
-    let precioEncontrado = '';
-
-    for (let i = datos.length - 2; i >= 10; i--) {
-      const valActual = parseFloat(datos[i]);
-      const valSig = parseInt(datos[i + 1], 10);
-
-      if (!isNaN(valActual) && valActual > 0 && !isNaN(valSig) && valSig >= 1 && valSig <= 50) {
-        precioEncontrado = valActual.toFixed(2);
-        cuponesCalculados = valSig;
-        break;
-      }
+    // 5. Cupones (datos[30] o por Tarifario)
+    let cupones = parseInt(datos[30], 10);
+    if (isNaN(cupones) || cupones <= 0) {
+      cupones = calcularCuponesPorPeso(peso);
     }
+    document.getElementById('cupones').value = cupones.toString();
 
-    // 4. Detección de Condición
-    const tieneCodigoEspecial = datos[1] && datos[1].trim().length > 3;
-    const esMontoCero = precioEncontrado === '' || parseFloat(precioEncontrado) === 0;
+    // 6. Precio (datos[29])
+    let precioRaw = parseFloat(datos[29]);
+    let precioFormatted = !isNaN(precioRaw) ? precioRaw.toFixed(2) : "0.00";
 
-    if (tieneCodigoEspecial || esMontoCero) {
+    // 7. Condición de Pago (datos[1] para Preadquirido, datos[20] para COD/PAGO)
+    const codigoEspecial = (datos[1] || '').trim();
+    const esPreadquirido = codigoEspecial.startsWith('CS-') || (codigoEspecial.length > 3 && precioRaw === 0);
+
+    if (esPreadquirido) {
       document.getElementById('tipoEnvio').value = 'PREADQUIRIDO';
       document.getElementById('precio').value = '0.00';
-      if (datos[28] && !isNaN(parseInt(datos[28]))) cuponesCalculados = parseInt(datos[28]);
     } else {
-      const esCod = datos[19] === '1';
+      const esCod = datos[20] === '1';
       document.getElementById('tipoEnvio').value = esCod ? 'COD' : 'PAGO';
-      document.getElementById('precio').value = precioEncontrado;
+      document.getElementById('precio').value = precioFormatted;
     }
-
-    document.getElementById('cupones').value = cuponesCalculados.toString();
 
     const statusMsg = document.getElementById('statusMsg');
     statusMsg.innerHTML = '✨ ¡QR Escaneado con Éxito!';
@@ -273,7 +267,7 @@ function procesarTextoQR(decodedText) {
 }
 
 // ==========================================================================
-// ALMACENAMIENTO LOCAL CON CONTROL ANTI-DUPLICADOS
+// ALMACENAMIENTO LOCAL
 // ==========================================================================
 function guardarLocalmente(e) {
   e.preventDefault();
@@ -332,7 +326,7 @@ function actualizarContadorUI() {
 }
 
 // ==========================================================================
-// MODAL DE GESTIÓN Y LISTA
+// MODAL DE LISTA DE PENDIENTES
 // ==========================================================================
 function abrirModalLista() {
   renderizarListaModal();
@@ -382,7 +376,7 @@ function eliminarPaquete(index) {
   localStorage.setItem('mrw_cola_paquetes', JSON.stringify(cola));
   actualizarContadorUI();
   renderizarListaModal();
-  showToast(`Paquete #${paqueteEliminado ? paqueteEliminado.numeroEnvio : ''} eliminado de la lista`, "info", "🗑️");
+  showToast(`Paquete #${paqueteEliminado ? paqueteEliminado.numeroEnvio : ''} eliminado`, "info", "🗑️");
 }
 
 function prepararEdicion(index) {
