@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,70 +9,93 @@
 </head>
 <body>
 
-  <div class="container">
-    <!-- Barra superior con contador y botones estilizados -->
-    <div class="header-sync">
-      <div class="counter-group">
-        <span class="counter-badge" id="lblPendientes">Pendientes: 0</span>
-        <button type="button" class="btn-ver" id="btnVerPendientes">📋 Ver Lista</button>
+  <div class="app-container">
+    
+    <!-- Top Bar Navigation / Header -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-icon">📦</div>
+        <div>
+          <h1 class="brand-title">MRW Scanner</h1>
+          <span class="brand-subtitle">Control de Recepción</span>
+        </div>
       </div>
-      <button type="button" class="btn-sync" id="btnSincronizar">🔄 Sincronizar</button>
+      <button type="button" class="btn-icon" id="btnThemeToggle" title="Cambiar Tema">
+        <span id="themeIcon">🌙</span>
+      </button>
+    </header>
+
+    <!-- Barra de Estado & Acciones -->
+    <div class="actions-bar">
+      <div class="counter-pill">
+        <span class="status-dot"></span>
+        <span id="lblPendientes">Pendientes: 0</span>
+        <button type="button" class="btn-chip" id="btnVerPendientes">Ver Lista 📋</button>
+      </div>
+      <button type="button" class="btn-sync" id="btnSincronizar">
+        <span>🔄</span> Sincronizar
+      </button>
     </div>
 
-    <!-- Visor de Cámara Continuo -->
-    <div id="reader"></div>
-    <div class="status-msg" id="statusMsg">Cámara activa. Apunte al QR...</div>
+    <!-- Visor de Cámara y Estado -->
+    <div class="scanner-card">
+      <div id="reader"></div>
+      <div class="status-badge" id="statusMsg">
+        <span class="pulse-icon"></span> Cámara lista. Apunte al QR...
+      </div>
+    </div>
 
-    <form id="registroForm">
-      <div class="grid">
+    <!-- Formulario Principal -->
+    <form id="registroForm" class="main-form">
+      <div class="form-row">
         <div class="form-group">
           <label for="telefonoReceptor">Teléfono Receptor</label>
-          <input type="text" id="telefonoReceptor" required>
+          <input type="text" id="telefonoReceptor" placeholder="04121234567" required>
         </div>
         <div class="form-group">
-          <label for="numeroEnvio">Nº de Envío</label>
-          <input type="text" id="numeroEnvio" required>
+          <label for="numeroEnvio">Nº de Envío / Tracking</label>
+          <input type="text" id="numeroEnvio" placeholder="130322..." required>
         </div>
       </div>
 
-      <div class="grid">
+      <div class="form-row">
         <div class="form-group">
-          <label for="tipoPaquete">Tipo (Formato)</label>
+          <label for="tipoPaquete">Formato</label>
           <select id="tipoPaquete">
-            <option value="ESPECIAL">ESPECIAL</option>
-            <option value="SOBRE">SOBRE</option>
-            <option value="PAQUETE">PAQUETE</option>
+            <option value="ESPECIAL">⚡ ESPECIAL</option>
+            <option value="SOBRE">✉️ SOBRE</option>
+            <option value="PAQUETE">📦 PAQUETE</option>
           </select>
         </div>
         <div class="form-group">
-          <label for="tipoEnvio">Condición</label>
+          <label for="tipoEnvio">Condición de Pago</label>
           <select id="tipoEnvio">
-            <option value="COD">COD</option>
-            <option value="PAGO">PAGO</option>
-            <option value="PREADQUIRIDO">PREADQUIRIDO</option>
+            <option value="COD">🔴 COD</option>
+            <option value="PAGO">🟢 PAGO</option>
+            <option value="PREADQUIRIDO">🔵 PREADQUIRIDO</option>
           </select>
         </div>
       </div>
 
-      <div class="grid">
+      <div class="form-row">
         <div class="form-group">
-          <label for="cupones">Cant. Cupones</label>
-          <input type="number" id="cupones" required>
+          <label for="cupones">Cupones</label>
+          <input type="number" id="cupones" placeholder="1" required>
         </div>
         <div class="form-group">
           <label for="precio">Precio (Bs.)</label>
-          <input type="number" step="0.01" id="precio" required>
+          <input type="number" step="0.01" id="precio" placeholder="0.00" required>
         </div>
       </div>
 
       <div class="form-group">
-        <label for="emisor">Emisor</label>
-        <input type="text" id="emisor" required>
+        <label for="emisor">Emisor (Remitente)</label>
+        <input type="text" id="emisor" placeholder="Nombre completo" required>
       </div>
 
       <div class="form-group">
-        <label for="receptor">Receptor</label>
-        <input type="text" id="receptor" required>
+        <label for="receptor">Receptor (Destinatario)</label>
+        <input type="text" id="receptor" placeholder="Nombre completo" required>
       </div>
 
       <div class="form-group">
@@ -80,17 +103,26 @@
         <input type="text" id="fechaEmision" placeholder="DD/MM/YY" required>
       </div>
 
-      <button type="submit" id="btnSubmitForm" class="btn-guardar">📥 Guardar Localmente</button>
-      <button type="button" id="btnCancelarEdicion" class="btn-cancelar" style="display: none;">❌ Cancelar Edición</button>
+      <div class="form-actions">
+        <button type="submit" id="btnSubmitForm" class="btn-primary">
+          <span>📥</span> Guardar Localmente
+        </button>
+        <button type="button" id="btnCancelarEdicion" class="btn-secondary" style="display: none;">
+          ❌ Cancelar Edición
+        </button>
+      </div>
     </form>
   </div>
 
   <!-- Modal para ver / editar / borrar la lista local -->
-  <div id="modalLista" class="modal" style="display: none;">
-    <div class="modal-content">
+  <div id="modalLista" class="modal-backdrop" style="display: none;">
+    <div class="modal-container">
       <div class="modal-header">
-        <h3>Paquetes Guardados Localmente</h3>
-        <span class="close-modal" id="btnCloseModal">&times;</span>
+        <div>
+          <h3 class="modal-title">Cola de Envíos Pendientes</h3>
+          <p class="modal-subtitle">Revisa o edita los paquetes cargados en memoria</p>
+        </div>
+        <button type="button" class="btn-close" id="btnCloseModal">&times;</button>
       </div>
       <div id="contenedorLista" class="modal-body"></div>
     </div>

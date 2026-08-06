@@ -3,6 +3,7 @@ let paquetePausado = false;
 let indiceEdicion = null;
 
 document.addEventListener("DOMContentLoaded", () => {
+  initTheme();
   actualizarContadorUI();
   iniciarCamara();
 
@@ -11,9 +12,33 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById('btnVerPendientes').addEventListener('click', abrirModalLista);
   document.getElementById('btnCloseModal').addEventListener('click', cerrarModalLista);
   document.getElementById('btnCancelarEdicion').addEventListener('click', cancelarEdicion);
+  document.getElementById('btnThemeToggle').addEventListener('click', toggleTheme);
 });
 
-// Lógica de detección automática avanzada de QR
+// ==========================================================================
+// GESTIÓN DE TEMA (MODO OSCURO / CLARO)
+// ==========================================================================
+function initTheme() {
+  const savedTheme = localStorage.getItem('mrw_theme') || 'light';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  updateThemeIcon(savedTheme);
+}
+
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', newTheme);
+  localStorage.setItem('mrw_theme', newTheme);
+  updateThemeIcon(newTheme);
+}
+
+function updateThemeIcon(theme) {
+  document.getElementById('themeIcon').innerText = theme === 'dark' ? '☀️' : '🌙';
+}
+
+// ==========================================================================
+// ESCÁNER Y PARSER DE CÓDIGO QR
+// ==========================================================================
 function procesarTextoQR(decodedText) {
   if (paquetePausado) return;
 
@@ -24,13 +49,12 @@ function procesarTextoQR(decodedText) {
     document.getElementById('numeroEnvio').value = datos[0] || '';
     document.getElementById('emisor').value = (datos[3] || '').toUpperCase();
     document.getElementById('receptor').value = (datos[8] || '').toUpperCase();
-    
-    // Limpieza de teléfono (conservar números)
+
     let tlf = datos[9] || '';
     if (tlf.startsWith('+58')) tlf = '0' + tlf.slice(3);
     document.getElementById('telefonoReceptor').value = tlf;
 
-    // 1. Detección de Fecha de Emisión
+    // 1. Detección de Fecha
     if (datos[2]) {
       const fechaHora = datos[2].split(' ')[0];
       const p = fechaHora.split('-');
@@ -39,7 +63,7 @@ function procesarTextoQR(decodedText) {
       }
     }
 
-    // 2. Detección de Peso y Asignación de Tipo (Formato)
+    // 2. Detección de Peso y Formato (ESPECIAL / SOBRE / PAQUETE)
     const peso = parseFloat(datos[22]) || 0;
     if (peso < 0.151) {
       document.getElementById('tipoPaquete').value = 'ESPECIAL';
@@ -65,18 +89,13 @@ function procesarTextoQR(decodedText) {
     }
 
     // 4. Detección de Condición (COD / PAGO / PREADQUIRIDO)
-    // Preadquiridos: Tienen código especial en datos[1] (ej: CS-...) y monto en 0.00
     const tieneCodigoEspecial = datos[1] && datos[1].trim().length > 3;
     const esMontoCero = precioEncontrado === '' || parseFloat(precioEncontrado) === 0;
 
     if (tieneCodigoEspecial || esMontoCero) {
       document.getElementById('tipoEnvio').value = 'PREADQUIRIDO';
       document.getElementById('precio').value = '0.00';
-      
-      // Intentar extraer cupones para Preadquiridos si no vino precio
-      if (datos[28] && !isNaN(parseInt(datos[28]))) {
-        cuponesEncontrados = datos[28];
-      }
+      if (datos[28] && !isNaN(parseInt(datos[28]))) cuponesEncontrados = datos[28];
     } else {
       const esCod = datos[19] === '1';
       document.getElementById('tipoEnvio').value = esCod ? 'COD' : 'PAGO';
@@ -86,13 +105,13 @@ function procesarTextoQR(decodedText) {
     document.getElementById('cupones').value = cuponesEncontrados;
 
     const statusMsg = document.getElementById('statusMsg');
-    statusMsg.innerText = "¡QR Detectado y Cargado!";
-    statusMsg.style.color = "#007bff";
+    statusMsg.innerHTML = '<span class="status-dot"></span> ¡QR Escaneado con Éxito!';
+    statusMsg.style.color = "var(--accent-blue)";
 
     setTimeout(() => {
       paquetePausado = false;
-      statusMsg.innerText = "Cámara activa. Apunte al QR...";
-      statusMsg.style.color = "var(--status-green)";
+      statusMsg.innerHTML = '<span class="status-dot"></span> Cámara lista. Apunte al QR...';
+      statusMsg.style.color = "var(--success)";
     }, 2500);
   }
 }
@@ -106,11 +125,14 @@ function iniciarCamara() {
     () => {}
   ).catch(() => {
     const statusMsg = document.getElementById('statusMsg');
-    statusMsg.innerText = "Error de acceso a cámara.";
-    statusMsg.style.color = "red";
+    statusMsg.innerText = "Error: Permiso de cámara denegado.";
+    statusMsg.style.color = "var(--primary)";
   });
 }
 
+// ==========================================================================
+// ALMACENAMIENTO Y EDICIÓN LOCAL
+// ==========================================================================
 function guardarLocalmente(e) {
   e.preventDefault();
 
@@ -137,8 +159,7 @@ function guardarLocalmente(e) {
   if (indiceEdicion !== null) {
     cola[indiceEdicion] = paqueteData;
     indiceEdicion = null;
-    document.getElementById('btnSubmitForm').innerText = '📥 Guardar Localmente';
-    document.getElementById('btnSubmitForm').style.backgroundColor = 'var(--primary-red)';
+    document.getElementById('btnSubmitForm').innerHTML = '<span>📥</span> Guardar Localmente';
     document.getElementById('btnCancelarEdicion').style.display = 'none';
   } else {
     cola.push(paqueteData);
@@ -149,8 +170,8 @@ function guardarLocalmente(e) {
   actualizarContadorUI();
 
   const statusMsg = document.getElementById('statusMsg');
-  statusMsg.innerText = "Guardado en memoria local";
-  statusMsg.style.color = "var(--status-green)";
+  statusMsg.innerHTML = '<span class="status-dot"></span> Guardado en Memoria Local';
+  statusMsg.style.color = "var(--success)";
 }
 
 function actualizarContadorUI() {
@@ -159,6 +180,9 @@ function actualizarContadorUI() {
   document.getElementById('btnSincronizar').disabled = cola.length === 0;
 }
 
+// ==========================================================================
+// MODAL DE GESTIÓN Y LISTA
+// ==========================================================================
 function abrirModalLista() {
   renderizarListaModal();
   document.getElementById('modalLista').style.display = 'flex';
@@ -173,7 +197,7 @@ function renderizarListaModal() {
   const cola = JSON.parse(localStorage.getItem('mrw_cola_paquetes') || '[]');
 
   if (cola.length === 0) {
-    contenedor.innerHTML = '<p style="text-align:center; color:#777;">No hay paquetes pendientes por enviar.</p>';
+    contenedor.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding:20px;">No hay envíos pendientes por sincronizar.</p>';
     return;
   }
 
@@ -181,14 +205,16 @@ function renderizarListaModal() {
   cola.forEach((p, index) => {
     html += `
       <div class="item-card">
-        <div class="item-card-title">📦 Nº: ${p.numeroEnvio} (${p.tipoEnvio})</div>
-        <div class="item-card-detail"><strong>Emisor:</strong> ${p.emisor}</div>
-        <div class="item-card-detail"><strong>Receptor:</strong> ${p.receptor} (${p.telefonoReceptor})</div>
-        <div class="item-card-detail"><strong>Monto / Cupones:</strong> Bs. ${p.precio} / ${p.cupones} cupón(es)</div>
-        <div class="item-card-detail"><strong>Tipo:</strong> ${p.tipoPaquete} | <strong>Fecha Emisión:</strong> ${p.fechaEmision}</div>
+        <div class="item-header">
+          <span class="item-code">#${p.numeroEnvio}</span>
+          <span class="item-badge">${p.tipoEnvio} | ${p.tipoPaquete}</span>
+        </div>
+        <div class="item-detail"><strong>Receptor:</strong> ${p.receptor} (${p.telefonoReceptor})</div>
+        <div class="item-detail"><strong>Emisor:</strong> ${p.emisor}</div>
+        <div class="item-detail"><strong>Monto / Cupones:</strong> Bs. ${p.precio} (${p.cupones} cup)</div>
         <div class="item-actions">
-          <button class="btn-item-edit" onclick="prepararEdicion(${index})">✏️ Editar</button>
-          <button class="btn-item-delete" onclick="eliminarPaquete(${index})">🗑️ Borrar</button>
+          <button class="btn-action-edit" onclick="prepararEdicion(${index})">✏️ Editar</button>
+          <button class="btn-action-delete" onclick="eliminarPaquete(${index})">🗑️ Borrar</button>
         </div>
       </div>
     `;
@@ -198,7 +224,7 @@ function renderizarListaModal() {
 }
 
 function eliminarPaquete(index) {
-  if (confirm("¿Estás seguro de eliminar este paquete de la lista local?")) {
+  if (confirm("¿Deseas eliminar este registro de la lista local?")) {
     const cola = JSON.parse(localStorage.getItem('mrw_cola_paquetes') || '[]');
     cola.splice(index, 1);
     localStorage.setItem('mrw_cola_paquetes', JSON.stringify(cola));
@@ -226,8 +252,7 @@ function prepararEdicion(index) {
   document.getElementById('fechaEmision').value = p.fechaEmision;
 
   const btnSubmit = document.getElementById('btnSubmitForm');
-  btnSubmit.innerText = '💾 Actualizar Cambios';
-  btnSubmit.style.backgroundColor = 'var(--orange-edit)';
+  btnSubmit.innerHTML = '<span>💾</span> Actualizar Cambios';
   document.getElementById('btnCancelarEdicion').style.display = 'block';
 
   cerrarModalLista();
@@ -238,11 +263,13 @@ function cancelarEdicion() {
   indiceEdicion = null;
   document.getElementById('registroForm').reset();
   const btnSubmit = document.getElementById('btnSubmitForm');
-  btnSubmit.innerText = '📥 Guardar Localmente';
-  btnSubmit.style.backgroundColor = 'var(--primary-red)';
+  btnSubmit.innerHTML = '<span>📥</span> Guardar Localmente';
   document.getElementById('btnCancelarEdicion').style.display = 'none';
 }
 
+// ==========================================================================
+// SINCRONIZACIÓN CON GOOGLE SHEETS
+// ==========================================================================
 async function sincronizarConSheets() {
   const cola = JSON.parse(localStorage.getItem('mrw_cola_paquetes') || '[]');
   if (cola.length === 0) return;
@@ -272,7 +299,7 @@ async function sincronizarConSheets() {
 
   localStorage.setItem('mrw_cola_paquetes', JSON.stringify(colaRestante));
   actualizarContadorUI();
-  btnSync.innerText = "🔄 Sincronizar";
+  btnSync.innerHTML = '<span>🔄</span> Sincronizar';
 
   if (exitosos > 0) {
     alert(`¡Se sincronizaron ${exitosos} paquete(s) con Google Sheets exitosamente!`);
