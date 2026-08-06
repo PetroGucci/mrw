@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registro MRW - Escáner Pro</title>
+  <link rel="stylesheet" href="styles.css">
+  <!-- Librería externa para el lector QR -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Barra superior de sincronización local -->
+    <div class="header-sync">
+      <span class="counter-badge" id="lblPendientes">Pendientes: 0</span>
+      <button type="button" class="btn-sync" id="btnSincronizar">🔄 Sincronizar con Sheets</button>
+    </div>
+
+    <!-- Visor de Cámara Continuo -->
+    <div id="reader"></div>
+    <div class="status-msg" id="statusMsg">Cámara activa. Apunte al QR...</div>
+
+    <form id="registroForm">
+      <div class="grid">
+        <div class="form-group">
+          <label for="telefonoReceptor">Teléfono Receptor</label>
+          <input type="text" id="telefonoReceptor" required>
+        </div>
+        <div class="form-group">
+          <label for="numeroEnvio">Nº de Envío</label>
+          <input type="text" id="numeroEnvio" required>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="form-group">
+          <label for="tipoPaquete">Tipo (Sobre/Paquete)</label>
+          <select id="tipoPaquete">
+            <option value="PAQUETE">Paquete</option>
+            <option value="SOBRE">Sobre</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="tipoEnvio">Condición</label>
+          <select id="tipoEnvio">
+            <option value="COD">COD</option>
+            <option value="PAGO">PAGO</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="form-group">
+          <label for="cupones">Cant. Cupones</label>
+          <input type="number" id="cupones" required>
+        </div>
+        <div class="form-group">
+          <label for="precio">Precio (Bs.)</label>
+          <input type="number" step="0.01" id="precio" required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="emisor">Emisor</label>
+        <input type="text" id="emisor" required>
+      </div>
+
+      <div class="form-group">
+        <label for="receptor">Receptor</label>
+        <input type="text" id="receptor" required>
+      </div>
+
+      <div class="form-group">
+        <label for="fechaEmision">Fecha de Emisión</label>
+        <input type="text" id="fechaEmision" placeholder="DD/MM/YY" required>
+      </div>
+
+      <button type="submit" class="btn-guardar">📥 Guardar Localmente</button>
+    </form>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
