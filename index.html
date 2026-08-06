@@ -5,16 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Registro MRW - Escáner Pro</title>
   <link rel="stylesheet" href="styles.css">
-  <!-- Librería externa para el lector QR -->
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body>
 
   <div class="container">
-    <!-- Barra superior de sincronización local -->
+    <!-- Barra superior de sincronización y vista -->
     <div class="header-sync">
-      <span class="counter-badge" id="lblPendientes">Pendientes: 0</span>
-      <button type="button" class="btn-sync" id="btnSincronizar">🔄 Sincronizar con Sheets</button>
+      <div>
+        <span class="counter-badge" id="lblPendientes">Pendientes: 0</span>
+        <button type="button" class="btn-ver" id="btnVerPendientes">📋 Ver Lista</button>
+      </div>
+      <button type="button" class="btn-sync" id="btnSincronizar">🔄 Sincronizar</button>
     </div>
 
     <!-- Visor de Cámara Continuo -->
@@ -76,8 +78,22 @@
         <input type="text" id="fechaEmision" placeholder="DD/MM/YY" required>
       </div>
 
-      <button type="submit" class="btn-guardar">📥 Guardar Localmente</button>
+      <button type="submit" id="btnSubmitForm" class="btn-guardar">📥 Guardar Localmente</button>
+      <button type="button" id="btnCancelarEdicion" class="btn-cancelar" style="display: none;">❌ Cancelar Edición</button>
     </form>
+  </div>
+
+  <!-- Modal para ver / editar / borrar la lista local -->
+  <div id="modalLista" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Paquetes Guardados Localmente</h3>
+        <span class="close-modal" id="btnCloseModal">&times;</span>
+      </div>
+      <div id="contenedorLista" class="modal-body">
+        <!-- Se rellena dinámicamente desde app.js -->
+      </div>
+    </div>
   </div>
 
   <script src="app.js"></script>

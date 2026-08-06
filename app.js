@@ -1,5 +1,6 @@
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzY5mSFuqqP99aYIx7FK4nF78R18eFrtffQdEBen2c4UM1wqW5jN1z-Z_PW2okITNGA/exec'; 
 let paquetePausado = false;
+let indiceEdicion = null; // Guarda el índice si estamos modificando un paquete
 
 document.addEventListener("DOMContentLoaded", () => {
   actualizarContadorUI();
@@ -7,8 +8,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById('registroForm').addEventListener('submit', guardarLocalmente);
   document.getElementById('btnSincronizar').addEventListener('click', sincronizarConSheets);
+  document.getElementById('btnVerPendientes').addEventListener('click', abrirModalLista);
+  document.getElementById('btnCloseModal').addEventListener('click', cerrarModalLista);
+  document.getElementById('btnCancelarEdicion').addEventListener('click', cancelarEdicion);
 });
 
+// Parser de datos del código QR
 function procesarTextoQR(decodedText) {
   if (paquetePausado) return;
 
@@ -64,7 +69,7 @@ function iniciarCamara() {
     { facingMode: "environment" },
     { fps: 15, qrbox: { width: 220, height: 220 } },
     (decodedText) => procesarTextoQR(decodedText),
-    (error) => {}
+    () => {}
   ).catch(() => {
     const statusMsg = document.getElementById('statusMsg');
     statusMsg.innerText = "Error de acceso a cámara.";
@@ -72,6 +77,7 @@ function iniciarCamara() {
   });
 }
 
+// Guardar o Actualizar Paquete en LocalStorage
 function guardarLocalmente(e) {
   e.preventDefault();
 
@@ -80,7 +86,7 @@ function guardarLocalmente(e) {
   const mes = String(hoy.getMonth() + 1).padStart(2, '0');
   const anio = hoy.getFullYear().toString().slice(-2);
 
-  const nuevoPaquete = {
+  const paqueteData = {
     telefonoReceptor: document.getElementById('telefonoReceptor').value,
     numeroEnvio: document.getElementById('numeroEnvio').value,
     tipoPaquete: document.getElementById('tipoPaquete').value,
@@ -94,9 +100,20 @@ function guardarLocalmente(e) {
   };
 
   const cola = JSON.parse(localStorage.getItem('mrw_cola_paquetes') || '[]');
-  cola.push(nuevoPaquete);
-  localStorage.setItem('mrw_cola_paquetes', JSON.stringify(cola));
 
+  if (indiceEdicion !== null) {
+    // Modo Edición: Actualiza la posición existente
+    cola[indiceEdicion] = paqueteData;
+    indiceEdicion = null;
+    document.getElementById('btnSubmitForm').innerText = '📥 Guardar Localmente';
+    document.getElementById('btnSubmitForm').style.backgroundColor = 'var(--primary-red)';
+    document.getElementById('btnCancelarEdicion').style.display = 'none';
+  } else {
+    // Modo Nuevo: Agrega a la cola
+    cola.push(paqueteData);
+  }
+
+  localStorage.setItem('mrw_cola_paquetes', JSON.stringify(cola));
   document.getElementById('registroForm').reset();
   actualizarContadorUI();
 
@@ -111,6 +128,93 @@ function actualizarContadorUI() {
   document.getElementById('btnSincronizar').disabled = cola.length === 0;
 }
 
+// Modal y Gestión de Lista
+function abrirModalLista() {
+  renderizarListaModal();
+  document.getElementById('modalLista').style.display = 'flex';
+}
+
+function cerrarModalLista() {
+  document.getElementById('modalLista').style.display = 'none';
+}
+
+function renderizarListaModal() {
+  const contenedor = document.getElementById('contenedorLista');
+  const cola = JSON.parse(localStorage.getItem('mrw_cola_paquetes') || '[]');
+
+  if (cola.length === 0) {
+    contenedor.innerHTML = '<p style="text-align:center; color:#777;">No hay paquetes pendientes por enviar.</p>';
+    return;
+  }
+
+  let html = '';
+  cola.forEach((p, index) => {
+    html += `
+      <div class="item-card">
+        <div class="item-card-title">📦 Nº: ${p.numeroEnvio} (${p.tipoEnvio})</div>
+        <div class="item-card-detail"><strong>Emisor:</strong> ${p.emisor}</div>
+        <div class="item-card-detail"><strong>Receptor:</strong> ${p.receptor} (${p.telefonoReceptor})</div>
+        <div class="item-card-detail"><strong>Monto / Cupones:</strong> Bs. ${p.precio} / ${p.cupones} cupón(es)</div>
+        <div class="item-card-detail"><strong>Tipo:</strong> ${p.tipoPaquete} | <strong>Fecha Emisión:</strong> ${p.fechaEmision}</div>
+        <div class="item-actions">
+          <button class="btn-item-edit" onclick="prepararEdicion(${index})">✏️ Editar</button>
+          <button class="btn-item-delete" onclick="eliminarPaquete(${index})">🗑️ Borrar</button>
+        </div>
+      </div>
+    `;
+  });
+
+  contenedor.innerHTML = html;
+}
+
+function eliminarPaquete(index) {
+  if (confirm("¿Estás seguro de eliminar este paquete de la lista local?")) {
+    const cola = JSON.parse(localStorage.getItem('mrw_cola_paquetes') || '[]');
+    cola.splice(index, 1);
+    localStorage.setItem('mrw_cola_paquetes', JSON.stringify(cola));
+    actualizarContadorUI();
+    renderizarListaModal();
+  }
+}
+
+function prepararEdicion(index) {
+  const cola = JSON.parse(localStorage.getItem('mrw_cola_paquetes') || '[]');
+  const p = cola[index];
+
+  if (!p) return;
+
+  indiceEdicion = index;
+
+  document.getElementById('telefonoReceptor').value = p.telefonoReceptor;
+  document.getElementById('numeroEnvio').value = p.numeroEnvio;
+  document.getElementById('tipoPaquete').value = p.tipoPaquete;
+  document.getElementById('tipoEnvio').value = p.tipoEnvio;
+  document.getElementById('cupones').value = p.cupones;
+  document.getElementById('precio').value = p.precio;
+  document.getElementById('emisor').value = p.emisor;
+  document.getElementById('receptor').value = p.receptor;
+  document.getElementById('fechaEmision').value = p.fechaEmision;
+
+  // Cambiar botones UI
+  const btnSubmit = document.getElementById('btnSubmitForm');
+  btnSubmit.innerText = '💾 Actualizar Cambios';
+  btnSubmit.style.backgroundColor = 'var(--orange-edit)';
+  document.getElementById('btnCancelarEdicion').style.display = 'block';
+
+  cerrarModalLista();
+  window.scrollTo({ top: document.getElementById('registroForm').offsetTop, behavior: 'smooth' });
+}
+
+function cancelarEdicion() {
+  indiceEdicion = null;
+  document.getElementById('registroForm').reset();
+  const btnSubmit = document.getElementById('btnSubmitForm');
+  btnSubmit.innerText = '📥 Guardar Localmente';
+  btnSubmit.style.backgroundColor = 'var(--primary-red)';
+  document.getElementById('btnCancelarEdicion').style.display = 'none';
+}
+
+// Sincronización masiva con Google Sheets
 async function sincronizarConSheets() {
   const cola = JSON.parse(localStorage.getItem('mrw_cola_paquetes') || '[]');
   if (cola.length === 0) return;
@@ -140,7 +244,7 @@ async function sincronizarConSheets() {
 
   localStorage.setItem('mrw_cola_paquetes', JSON.stringify(colaRestante));
   actualizarContadorUI();
-  btnSync.innerText = "🔄 Sincronizar con Sheets";
+  btnSync.innerText = "🔄 Sincronizar";
 
   if (exitosos > 0) {
     alert(`¡Se sincronizaron ${exitosos} paquete(s) con Google Sheets exitosamente!`);
