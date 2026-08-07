@@ -72,16 +72,16 @@ function doPost(e) {
     
     sheet.appendRow([
       "", 
-      data.telefonoReceptor,
-      data.numeroEnvio,
-      data.tipoPaquete,
-      data.tipoEnvio,
-      data.cupones,
-      data.precio,
-      data.emisor,
-      data.receptor,
-      data.fechaEmision,
-      data.fechaRecepcion
+      datos.telefonoReceptor, // B: Numero tlf
+      datos.numeroEnvio,      // C: Número Tracking
+      datos.tipoPaquete,      // D: Formato
+      datos.cupones,          // E: Cupones 
+      datos.tipoEnvio,        // F: Tipo 
+      datos.precio,           // G: Precio
+      datos.emisor,           // H: Emisor
+      datos.receptor,         // I: Receptor
+      datos.fechaEmision,     // J: Fecha emisión
+      datos.fechaRecepcion    // K: Fecha recepción
     ]);
     
     return ContentService.createTextOutput("Éxito").setMimeType(ContentService.MimeType.TEXT);
