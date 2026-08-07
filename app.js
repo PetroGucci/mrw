@@ -1,5 +1,4 @@
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzY5mSFuqqP99aYIx7FK4nF78R18eFrtffQdEBen2c4UM1wqW5jN1z-Z_PW2okITNGA/exec'; 
-
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxc8Nf-el9bz003tqRDtLGmzIJhnQwDOpWqKeFpAUdafR4m7Pd7iRPpfSLKdRNh89Ml/exec';
 let html5QrcodeScanner = null;
 let paquetePausado = false;
 let indiceEdicion = null;
