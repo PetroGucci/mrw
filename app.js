@@ -5,6 +5,14 @@ let indiceEdicion = null;
 let torchActive = false;
 let currentFacingMode = "environment";
 
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => console.log('Service Worker registrado con éxito'))
+      .catch(err => console.warn('Error al registrar Service Worker', err));
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   initTheme();
   actualizarContadorUI();
