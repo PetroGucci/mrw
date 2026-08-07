@@ -127,17 +127,57 @@ function iniciarCamara() {
 }
 
 function startScannerInstance() {
-  html5QrcodeScanner = new Html5Qrcode("reader");
+  // Instancia habilitando la API nativa de lectura del navegador
+  html5QrcodeScanner = new Html5Qrcode("reader", {
+    experimentalFeatures: {
+      useBarCodeDetectorIfSupported: true
+    }
+  });
+
+  // Configuración de alto rendimiento (HD + Enfoque continuo + Visor amplio)
+  const configHighRes = {
+    fps: 25,
+    qrbox: (viewfinderWidth, viewfinderHeight) => {
+      const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+      const edge = Math.floor(minEdge * 0.85); // Cuadro amplio para no requerir encuadre perfecto
+      return { width: edge, height: edge };
+    },
+    videoConstraints: {
+      facingMode: currentFacingMode,
+      width: { min: 1280, ideal: 1920 },  // Fuerza resolución HD/Full HD para no pixelar el QR
+      height: { min: 720, ideal: 1080 },
+      advanced: [{ focusMode: "continuous" }]
+    }
+  };
+
   html5QrcodeScanner.start(
     { facingMode: currentFacingMode },
-    { fps: 15, qrbox: { width: 220, height: 220 } },
+    configHighRes,
     (decodedText) => procesarTextoQR(decodedText),
     () => {}
-  ).catch(() => {
-    const statusMsg = document.getElementById('statusMsg');
-    statusMsg.innerText = "Error: Permiso de cámara denegado.";
-    statusMsg.style.color = "var(--primary)";
-    showToast("Permiso de cámara denegado", "error");
+  ).catch((err) => {
+    console.warn("Dispositivo no soporta alta resolución, aplicando modo compatible...", err);
+    
+    // Fallback estándar para dispositivos más antiguos
+    const configFallback = {
+      fps: 15,
+      qrbox: { width: 250, height: 250 }
+    };
+
+    // CORREGIDO: Se eliminó el parámetro duplicado aquí
+    html5QrcodeScanner.start(
+      { facingMode: currentFacingMode },
+      configFallback,
+      (decodedText) => procesarTextoQR(decodedText),
+      () => {}
+    ).catch(() => {
+      const statusMsg = document.getElementById('statusMsg');
+      if (statusMsg) {
+        statusMsg.innerText = "Error: Permiso de cámara denegado o no disponible.";
+        statusMsg.style.color = "var(--primary)";
+      }
+      showToast("Error de acceso a la cámara", "error");
+    });
   });
 }
 
