@@ -16,7 +16,6 @@ if ('serviceWorker' in navigator) {
 document.addEventListener("DOMContentLoaded", () => {
   initTheme();
   actualizarContadorUI();
-  iniciarCamara();
 
   document.getElementById('registroForm').addEventListener('submit', guardarLocalmente);
   document.getElementById('btnSincronizar').addEventListener('click', sincronizarConSheets);
@@ -28,6 +27,37 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById('btnTorch').addEventListener('click', toggleTorch);
   document.getElementById('btnSwitchCam').addEventListener('click', switchCamera);
 });
+
+// ==========================================================================
+// CONTROL DE CÁMARA CON PERMISO Y AHORRO DE BATERÍA (NUEVO)
+// ==========================================================================
+
+// 1. Se ejecuta al hacer clic en el botón de escanear (cumple con la regla de seguridad del navegador)
+function iniciarEscaneoConPermiso() {
+  const contenedor = document.getElementById('contenedorScanner');
+  if (contenedor) {
+    contenedor.style.display = 'flex'; // Muestra el cuadro de la cámara
+  }
+  iniciarCamara(); // Llama al arranque de la cámara
+}
+
+// 2. Se ejecuta al tocar la ( X ) para apagar la cámara y ahorrar batería
+function cerrarScannerInstance() {
+  if (window.html5QrcodeScanner) {
+    window.html5QrcodeScanner.stop().then(() => {
+      window.html5QrcodeScanner.clear();
+      console.log("Cámara apagada correctamente.");
+    }).catch((err) => {
+      console.warn("Error al detener la cámara:", err);
+    });
+  }
+  
+  // Oculta el contenedor visual de la cámara
+  const contenedor = document.getElementById('contenedorScanner');
+  if (contenedor) {
+    contenedor.style.display = 'none';
+  }
+}
 
 // ==========================================================================
 // NOTIFICACIONES TOAST FLOTANTES

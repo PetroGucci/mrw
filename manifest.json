@@ -1,6 +1,6 @@
 {
   "name": "MRW Scanner",
-  "short_name": "MRW Scan",
+  "short_name": "MRW Scanner",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#ffffff",

@@ -46,10 +46,16 @@
     <!-- Visor de Cámara -->
     <div class="scanner-card">
       <div class="camera-wrapper">
-        <div id="reader"></div>
+        <div id="reader"></div> 
+        <!-- Controles flotantes sobre la cámara -->
         <div class="camera-overlay-controls">
-          <button type="button" class="btn-cam-mini" id="btnTorch" title="Encender Linterna">🔦</button>
-          <button type="button" class="btn-cam-mini" id="btnSwitchCam" title="Cambiar Cámara">🔄</button>
+          <!-- Botón ( X ) a la izquierda para apagar la cámara y ahorrar batería -->
+          <button type="button" class="btn-cam-mini" id="btnCloseCam" title="Apagar Cámara" onclick="cerrarScannerInstance()">❌</button>
+          <!-- Controles de la derecha (Linterna y Cambio de cámara) -->
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn-cam-mini" id="btnTorch" title="Encender Linterna">🔦</button>
+            <button type="button" class="btn-cam-mini" id="btnSwitchCam" title="Cambiar Cámara">🔄</button>
+          </div>
         </div>
       </div>
       <div class="status-badge" id="statusMsg">
