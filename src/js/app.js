@@ -8,7 +8,7 @@ let currentFacingMode = "environment";
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js')
+    navigator.serviceWorker.register('src/sw.js')
       .then(reg => console.log('Service Worker registrado con éxito'))
       .catch(err => console.warn('Error al registrar Service Worker', err));
   });
