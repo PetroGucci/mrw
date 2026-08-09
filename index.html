@@ -46,7 +46,13 @@
     <!-- Visor de Cámara -->
     <div class="scanner-card">
       <div class="camera-wrapper">
-        <div id="reader"></div> 
+        <div id="reader"></div>
+        <div id="cameraInactiveOverlay" class="camera-inactive-overlay" onclick="iniciarEscaneoConPermiso()">
+          <div>
+            <p class="camera-inactive-title">Toca para activar la cámara</p>
+            <p class="camera-inactive-subtitle">La cámara está apagada para ahorrar batería</p>
+          </div>
+        </div>
         <!-- Controles flotantes sobre la cámara -->
         <div class="camera-overlay-controls">
           <!-- Botón ( X ) a la izquierda para apagar la cámara y ahorrar batería -->

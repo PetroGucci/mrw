@@ -222,6 +222,38 @@ body {
   min-height: 180px;
 }
 
+.camera-inactive-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.72);
+  color: #FFFFFF;
+  text-align: center;
+  padding: 16px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.camera-inactive-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.camera-inactive-title {
+  font-size: 16px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.camera-inactive-subtitle {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
 .camera-overlay-controls {
   position: absolute;
   top: 10px;

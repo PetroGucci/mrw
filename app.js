@@ -1,5 +1,6 @@
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwrE6iaq227Wb3KTwXry5RSTg1qWaMFnCd3HaPUClAVNN5Rh7419zT9yqTr9weafd5J/exec';
 let html5QrcodeScanner = null;
+window.html5QrcodeScanner = null;
 let paquetePausado = false;
 let indiceEdicion = null;
 let torchActive = false;
@@ -34,28 +35,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // 1. Se ejecuta al hacer clic en el botón de escanear (cumple con la regla de seguridad del navegador)
 function iniciarEscaneoConPermiso() {
-  const contenedor = document.getElementById('contenedorScanner');
-  if (contenedor) {
-    contenedor.style.display = 'flex'; // Muestra el cuadro de la cámara
-  }
+  hideCameraInactiveOverlay();
   iniciarCamara(); // Llama al arranque de la cámara
 }
 
 // 2. Se ejecuta al tocar la ( X ) para apagar la cámara y ahorrar batería
 function cerrarScannerInstance() {
-  if (window.html5QrcodeScanner) {
-    window.html5QrcodeScanner.stop().then(() => {
-      window.html5QrcodeScanner.clear();
+  const scannerInstance = html5QrcodeScanner || window.html5QrcodeScanner;
+  if (scannerInstance) {
+    scannerInstance.stop().then(() => {
+      scannerInstance.clear();
+      html5QrcodeScanner = null;
+      window.html5QrcodeScanner = null;
       console.log("Cámara apagada correctamente.");
+      showCameraInactiveOverlay();
+      updateStatusMessage('Toca para activar la cámara', 'text-muted');
     }).catch((err) => {
       console.warn("Error al detener la cámara:", err);
+      html5QrcodeScanner = null;
+      window.html5QrcodeScanner = null;
+      showCameraInactiveOverlay();
+      updateStatusMessage('Toca para activar la cámara', 'text-muted');
     });
-  }
-  
-  // Oculta el contenedor visual de la cámara
-  const contenedor = document.getElementById('contenedorScanner');
-  if (contenedor) {
-    contenedor.style.display = 'none';
+  } else {
+    showCameraInactiveOverlay();
+    updateStatusMessage('Toca para activar la cámara', 'text-muted');
   }
 }
 
@@ -157,6 +161,7 @@ function updateThemeIcon(theme) {
 // CÁMARA & MINI-BOTONES
 // ==========================================================================
 function iniciarCamara() {
+  hideCameraInactiveOverlay();
   if (html5QrcodeScanner) {
     html5QrcodeScanner.stop().then(() => startScannerInstance()).catch(() => startScannerInstance());
   } else {
@@ -166,7 +171,7 @@ function iniciarCamara() {
 
 function startScannerInstance() {
   // Instancia habilitando la API nativa de lectura del navegador
-  html5QrcodeScanner = new Html5Qrcode("reader", {
+  window.html5QrcodeScanner = html5QrcodeScanner = new Html5Qrcode("reader", {
     experimentalFeatures: {
       useBarCodeDetectorIfSupported: true
     }
@@ -193,7 +198,10 @@ function startScannerInstance() {
     configHighRes,
     (decodedText) => procesarTextoQR(decodedText),
     () => {}
-  ).catch((err) => {
+  ).then(() => {
+    hideCameraInactiveOverlay();
+    updateStatusMessage('Cámara lista. Apunte al QR...', 'success');
+  }).catch((err) => {
     console.warn("Dispositivo no soporta alta resolución, aplicando modo compatible...", err);
     
     // Fallback estándar para dispositivos más antiguos
@@ -208,12 +216,12 @@ function startScannerInstance() {
       configFallback,
       (decodedText) => procesarTextoQR(decodedText),
       () => {}
-    ).catch(() => {
-      const statusMsg = document.getElementById('statusMsg');
-      if (statusMsg) {
-        statusMsg.innerText = "Error: Permiso de cámara denegado o no disponible.";
-        statusMsg.style.color = "var(--primary)";
-      }
+    ).then(() => {
+      hideCameraInactiveOverlay();
+      updateStatusMessage('Cámara lista. Apunte al QR...', 'success');
+    }).catch(() => {
+      showCameraInactiveOverlay();
+      updateStatusMessage('Error: Permiso de cámara denegado o no disponible.', 'primary');
       showToast("Error de acceso a la cámara", "error");
     });
   });
@@ -241,6 +249,28 @@ function switchCamera() {
   document.getElementById('btnTorch').classList.remove('active');
   iniciarCamara();
   showToast("Cámara alternada", "info", "🔄");
+}
+
+function showCameraInactiveOverlay() {
+  const overlay = document.getElementById('cameraInactiveOverlay');
+  if (overlay) {
+    overlay.classList.add('visible');
+  }
+}
+
+function hideCameraInactiveOverlay() {
+  const overlay = document.getElementById('cameraInactiveOverlay');
+  if (overlay) {
+    overlay.classList.remove('visible');
+  }
+}
+
+function updateStatusMessage(message, colorVar = 'success') {
+  const statusMsg = document.getElementById('statusMsg');
+  if (statusMsg) {
+    statusMsg.innerHTML = message;
+    statusMsg.style.color = `var(--${colorVar})`;
+  }
 }
 
 // ==========================================================================
